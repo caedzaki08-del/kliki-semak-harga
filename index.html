@@ -68,6 +68,8 @@ h2.sec{font:700 12px var(--f-body);letter-spacing:.12em;text-transform:uppercase
   background:color-mix(in srgb,var(--bc,#64748b) 15%,transparent);color:color-mix(in srgb,var(--bc,#64748b) 78%,var(--ink))}
 .copy{flex:none;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:9px;height:34px;padding:0 10px;font:700 12px var(--f-body);cursor:pointer}
 .copy:hover{color:var(--ink);border-color:var(--muted)} .copy:focus-visible{outline:2px solid var(--brand)}
+.sim{font:800 10px var(--f-body);letter-spacing:.07em;padding:2px 6px;border-radius:5px;border:1px solid var(--line);color:var(--muted);align-self:center;white-space:nowrap}
+.zpnote{margin:0 0 2px;font-size:12px;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:5px 9px}
 .note{margin:0 14px 6px;font-size:12.5px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:5px 9px}
 .v{padding:9px 14px 11px;border-top:1px solid var(--line);display:grid;gap:6px}
 .spec{font:700 14px var(--f-body);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
@@ -156,7 +158,6 @@ footer{font-size:12px;color:var(--muted);text-align:center;padding:4px 0 10px}
 <div class="chipbar" id="chipbar" hidden><div class="wrap"><div class="chips" id="chips" role="group" aria-label="Jenama"></div></div></div>
 <main><div class="wrap">
   <div class="metarow"><div class="meta" id="meta" aria-live="polite"></div><button id="tog" class="lnk" type="button" hidden>Buka semua</button></div>
-  <div class="legend" id="legend" hidden><span><i class="lv l1"></i>Entry level</span><span><i class="lv l2"></i>Midrange</span><span><i class="lv l3"></i>Flagship</span></div>
   <div id="out"></div>
   <details class="notes"><summary>Nota harga</summary><ul>
     <li>Harga KLIKI Offer tertakluk kepada bayaran tunai, kad debit, QR, online transfer dan Spay Later sahaja.</li>
@@ -252,26 +253,28 @@ function visibleGroups() {
   return list;
 }
 
+const ZP = 'Set ZP / XA: tambah RM100';
+const oriSim = (v, g) => g.g === 'Apple Used' && /^\d+(GB|TB)$/.test(v.s) ? ' <span class="sim">ORI SIM</span>' : '';
 function priceRow(v, g, pv) {
   if (v.x) { // iPhone dengan caj warna
     const ex = v.x.map(([c,a]) => `<li>${esc(c)} <b>${rm(v.o + a)}</b> <i>+${a}</i></li>`).join('');
-    return `<div class="v"><div class="spec">${pv?dot(v.lv):''}${esc(v.s)}</div><dl class="p one" style="--n:1"><div class="main"><dt>${LABEL[g.g]}</dt><dd>${rm(v.o)}</dd></div></dl><ul class="x">${ex}</ul></div>`;
+    return `<div class="v"><div class="spec">${pv?dot(v.lv):''}${esc(v.s)}${oriSim(v,g)}</div><dl class="p one" style="--n:1"><div class="main"><dt>${LABEL[g.g]}</dt><dd>${rm(v.o)}</dd></div></dl><ul class="x">${ex}</ul></div>`;
   }
   const lab = LABEL[g.g] || 'KLIKI Offer';
   const cols = [[lab,v.o,1]];
   if (!APPLE.includes(g.g) || g.g === 'Apple Used') cols.push(['Barcode',v.bc],['Kad Kredit',v.cc],['EPP',v.e]);
   const cells = cols.map(([l,n,m]) => `<div${m?' class="main"':''}><dt>${l}</dt><dd${n?'':' class="na"'}>${n?rm(n):'–'}</dd></div>`).join('');
   const w = v.w ? ` <small>${esc(v.w)}</small>` : '';
-  return `<div class="v"><div class="spec">${pv?dot(v.lv):''}${esc(v.s)}${w}</div><dl class="p${cols.length===1?' one':''}" style="--n:${cols.length}">${cells}</dl></div>`;
+  return `<div class="v"><div class="spec">${pv?dot(v.lv):''}${esc(v.s)}${oriSim(v,g)}${w}</div><dl class="p${cols.length===1?' one':''}" style="--n:${cols.length}">${cells}</dl></div>`;
 }
-function card(g, i) {
+function card(g, i, zp) {
   const nm = g.note ? `<div class="note">${esc(g.note)}</div>` : '';
   const c = COND[g.g];
   const lvs = new Set(g.v.map(v => v.lv || 0)), one = lvs.size === 1 && !lvs.has(0);
   const nameDot = one ? dot(g.v[0].lv) : '';
   const top = c ? `<div class="cband"><b>${c[1]}</b><small>${c[2]}</small></div>` : '';
   const pill = c ? '' : `<span class="pill">${esc(g.g)}</span>`;
-  return `<article class="card${c?' cond':''}" style="--bc:${BC[g.g]||'#64748b'}${c?';'+cvars(c[0]):''}">${top}<div class="ch"><div style="min-width:0">${pill}<h3>${nameDot}${esc(g.m)}</h3></div><button class="copy" type="button" data-i="${i}" aria-label="Salin harga ${esc(g.m)}">Salin</button></div>${nm}${g.v.map(v => priceRow(v,g,!one)).join('')}</article>`;
+  return `<article class="card${c?' cond':''}" style="--bc:${BC[g.g]||'#64748b'}${c?';'+cvars(c[0]):''}">${top}<div class="ch"><div style="min-width:0">${pill}<h3>${nameDot}${esc(g.m)}</h3></div><button class="copy" type="button" data-i="${i}" aria-label="Salin harga ${esc(g.m)}">Salin</button></div>${nm}${g.v.map(v => priceRow(v,g,!one)).join('')}${zp && g.g === 'Apple Used' ? `<div class="note" style="margin-top:8px">${ZP}</div>` : ''}</article>`;
 }
 
 let shown = [];
@@ -299,23 +302,22 @@ function render() {
   $('#chipbar').hidden = !showChips;
   if (showChips) { const list = state.seg === 'android' ? ANDROID : APPLE;
     $('#chips').innerHTML = `<button type="button" data-b="" aria-pressed="${!state.brand}">Semua</button>` + list.map(b => `<button type="button" data-b="${esc(b)}" aria-pressed="${state.brand===b}">${esc(b)}</button>`).join(''); }
-  if (!q && state.seg === 'promo') { $('#legend').hidden = true; meta.textContent = ''; out.innerHTML = promoView(); shown = []; return; }
+  if (!q && state.seg === 'promo') { meta.textContent = ''; out.innerHTML = promoView(); shown = []; return; }
   shown = visibleGroups();
-  $('#legend').hidden = !shown.some(g => g.v.some(v => v.lv));
   const nv = shown.reduce((a,g) => a + g.v.length, 0);
   meta.textContent = q ? `${shown.length} model untuk "${q}" (${nv} varian)` : `${shown.length} model, ${nv} varian`;
   if (!shown.length) { out.innerHTML = `<div class="empty"><b>Tiada "${esc(q)}" dalam pricelist</b>Cuba nama lebih pendek, contohnya s26, a17, redmi 15 atau ip15pm.</div>`; return; }
-  if (q) { out.innerHTML = `<div style="display:grid;gap:12px">${shown.map((g,i) => card(g,i)).join('')}</div>`; $('#tog').hidden = true; return; }
+  if (q) { out.innerHTML = `<div style="display:grid;gap:12px">${shown.map((g,i) => card(g,i,true)).join('')}</div>`; $('#tog').hidden = true; return; }
   const secs = new Map();
   shown.forEach((g,i) => {
     const ser = seriesOf(g), key = ser ? g.g + '|' + ser : g.g;
-    if (!secs.has(key)) secs.set(key, {title: ser || g.g, sub: ser ? g.g.replace('Apple ','') : '', apple: !!ser, go: APPLE.indexOf(g.g), n: ser ? seriesNum(ser) : 0, cond: COND[g.g] || null, cards: [], count: 0});
+    if (!secs.has(key)) secs.set(key, {title: ser || g.g, sub: ser ? g.g.replace('Apple ','') : '', apple: !!ser, go: APPLE.indexOf(g.g), n: ser ? seriesNum(ser) : 0, cond: COND[g.g] || null, zp: g.g === 'Apple Used', cards: [], count: 0});
     const sc = secs.get(key); sc.cards.push(card(g,i)); sc.count++;
   });
   const all = [...secs.values()];
   const list = [...all.filter(x => !x.apple), ...all.filter(x => x.apple).sort((a,b) => a.go - b.go || b.n - a.n)];
   const open = list.length === 1 ? ' open' : '';
-  out.innerHTML = `<div style="display:grid;gap:10px">` + list.map(x => `<details class="grp${x.cond?' cond':''}"${x.cond?` style="${cvars(x.cond[0])}"`:''}${open}><summary class="gh"><span class="gl">${x.cond?`<span class="chip">${x.cond[1]}</span>`:''}<span class="gt">${esc(x.title)}</span></span><span class="gs">${x.count} model</span></summary><div class="gb">${x.cards.join('')}</div></details>`).join('') + `</div>`;
+  out.innerHTML = `<div style="display:grid;gap:10px">` + list.map(x => `<details class="grp${x.cond?' cond':''}"${x.cond?` style="${cvars(x.cond[0])}"`:''}${open}><summary class="gh"><span class="gl">${x.cond?`<span class="chip">${x.cond[1]}</span>`:''}<span class="gt">${esc(x.title)}</span></span><span class="gs">${x.count} model</span></summary><div class="gb">${x.zp ? `<div class="zpnote">${ZP}</div>` : ''}${x.cards.join('')}</div></details>`).join('') + `</div>`;
   $('#tog').hidden = list.length < 2; syncTog();
 }
 const syncTog = () => { const d = [...document.querySelectorAll('details.grp')]; $('#tog').textContent = d.length && d.every(x => x.open) ? 'Tutup semua' : 'Buka semua'; };
@@ -331,7 +333,7 @@ function copyText(txt) {
 $('#out').addEventListener('click', e => {
   const b = e.target.closest('.copy'); if (!b) return; const g = shown[+b.dataset.i]; if (!g) return;
   const lab = LABEL[g.g] || 'KLIKI Offer';
-  copyText(g.g.startsWith('Apple') ? `${g.m} (${g.g.slice(6)})` + '\n' + g.v.map(v => `${v.s}: ${rm(v.o)}`).join('\n') : `${g.g} ${g.m}\n` + g.v.map(v => `${v.s}: ${rm(v.o)}`).join('\n'));
+  copyText(g.g.startsWith('Apple') ? `${g.m} (${g.g.slice(6)})` + '\n' + g.v.map(v => `${v.s}${g.g === 'Apple Used' && /^\d+(GB|TB)$/.test(v.s) ? ' ORI SIM' : ''}: ${rm(v.o)}`).join('\n') : `${g.g} ${g.m}\n` + g.v.map(v => `${v.s}: ${rm(v.o)}`).join('\n'));
 });
 $('#q').addEventListener('input', e => { state.q = e.target.value; render(); });
 $('#clr').addEventListener('click', () => { $('#q').value = ''; state.q = ''; render(); $('#q').focus(); });
