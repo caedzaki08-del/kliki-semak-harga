@@ -490,10 +490,7 @@ const LVK = new Map(), LVM = new Map();
 for (const i of ITEMS) if (i.lv) { LVK.set(i.g + '|' + i.m + '|' + i.s, i.lv); LVM.set(i.g + '|' + i.m, i.lv); }
 function applyPrices(csv) { const it = parsePrices(csv); if (it.length < SNAP * 0.6) throw new Error('feed harga tak lengkap');
   for (const i of it) { const l = LVK.get(i.g + '|' + i.m + '|' + i.s) || LVM.get(i.g + '|' + i.m); if (l) i.lv = l; }
-  // TAHAN SEMENTARA: susunan harga iPhone Used (siri 16/17 dan varian LL/eSIM) bergeser satu baris dalam sheet pada 5 Nov
-  const hold = i => i.g === 'Apple Used' && (/^iPhone (16( Plus| Pro| Pro Max)?|17( Air| Pro| Pro Max)?)$/.test(i.m) || /\b(LL|eSIM)\b/i.test(i.s));
-  const keep = it.filter(i => !hold(i)); HELD = it.length - keep.length;
-  ITEMS = keep; buildGroups(); }
+  ITEMS = it; buildGroups(); }
 function applyPromos(csv) { if (!/HARGA PROMO/i.test(csv)) throw new Error('feed promo tak sah'); PROMOS = parsePromos(csv); }
 async function gv(id) { const r = await fetch('https://docs.google.com/spreadsheets/d/' + id + '/gviz/tq?tqx=out:csv', {cache:'no-store'}); if (!r.ok) throw new Error(r.status); return r.text(); }
 function fresh(msg) { const f = $('#fresh'); f.textContent = msg; f.hidden = false; }
