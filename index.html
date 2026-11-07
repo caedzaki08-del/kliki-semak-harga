@@ -288,7 +288,7 @@ const left = p => {
 function promoView() {
   const now = new Date();
   const list = [...PROMOS.filter(p => now <= p.end), ...PROMOS.filter(p => now > p.end)];
-  const row = (n,s,was,now,remark) => `<div class="pr"><div><div class="nm">${esc(n)}</div><div class="sp">${esc(s||'')}</div></div><div><div class="now">${rm(now)}</div><div class="was"><s>${rm(was)}</s><b>-${(was-now).toLocaleString('en-MY')}</b></div></div>${remark?`<div class="rm">${esc(remark)}</div>`:''}</div>`;
+  const row = (n,s,was,now,remark) => `<div class="pr"><div><div class="nm">${esc(n)}</div><div class="sp">${esc(s||'')}</div></div><div><div class="now">${rm(now)}</div>${was==null?'':`<div class="was"><s>${rm(was)}</s><b>-${(was-now).toLocaleString('en-MY')}</b></div>`}</div>${remark?`<div class="rm">${esc(remark)}</div>`:''}</div>`;
   return `<div style="display:grid;gap:12px">` + list.map(p => {
     const nrows = p.groups.reduce((a,g) => a + g.rows.length, 0);
     const head = `<summary class="promo-head"><div class="trow">${now <= p.end ? '<span class="tag live">Sedang berjalan</span>' + left(p) : '<span class="tag off">Promo tamat</span>'}</div><h3>${esc(p.label)}</h3><div class="meta">${p.from} hingga ${p.to} · ${nrows} harga${p.badges.length?' · '+p.badges.map(esc).join(' · '):''}</div></summary>`;
@@ -471,7 +471,7 @@ function parsePromos(csvText) {
     if (g.toUpperCase() === 'LENCANA') { if (rem) P.badges.push(rem); continue; }
     if (g.toUpperCase() === 'NOTA') { if (rem) P.notes.push(rem); continue; }
     let G = P.groups.find(x => x.t === g); if (!G) { G = {t: g, rows: [], notes: []}; P.groups.push(G); }
-    if (now == null || was == null) { if (rem) G.notes.push(rem); continue; }
+    if (now == null) { if (rem) G.notes.push(rem); continue; }  // baris tanpa harga promo = nota; tanpa HARGA ASAL = harga pre-order sahaja
     const same = model.toLowerCase() === g.toLowerCase();
     const row = same ? [spec, '', was, now] : [model, spec, was, now]; if (rem) row.push(rem);
     G.rows.push(row);
