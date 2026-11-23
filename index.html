@@ -72,6 +72,9 @@ h2.sec{font:700 12px var(--f-body);letter-spacing:.12em;text-transform:uppercase
 .zpnote{margin:0 0 2px;font-size:12px;color:var(--muted);background:var(--surface);border:1px dashed var(--line);border-radius:8px;padding:5px 9px}
 .note{margin:0 14px 6px;font-size:12.5px;color:var(--warn);background:var(--warn-bg);border-radius:8px;padding:5px 9px}
 .v{padding:9px 14px 11px;border-top:1px solid var(--line);display:grid;gap:6px}
+.nb{font:800 10px var(--f-body);letter-spacing:.05em;text-transform:uppercase;padding:2px 7px;border-radius:99px;align-self:center}
+.nb.new{background:var(--live);color:var(--live-ink)}
+.nb.upd{background:#f59e0b;color:#111}
 .spec{font:700 14px var(--f-body);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}
 .spec small{font-weight:600;color:var(--muted);font-size:12px}
 .p{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr) minmax(0,1.2fr) minmax(0,1fr);gap:6px;margin:0}
@@ -260,14 +263,14 @@ const oriSim = (v, g) => g.g === 'Apple Used' && /^\d+(GB|TB)$/.test(v.s) ? ' <s
 function priceRow(v, g, pv) {
   if (v.x) { // iPhone dengan caj warna
     const ex = v.x.map(([c,a]) => `<li>${esc(c)} <b>${rm(v.o + a)}</b> <i>+${a}</i></li>`).join('');
-    return `<div class="v"><div class="spec">${pv?dot(v.lv):''}${esc(v.s)}${oriSim(v,g)}</div><dl class="p one" style="--n:1"><div class="main"><dt>${LABEL[g.g]}</dt><dd>${rm(v.o)}</dd></div></dl><ul class="x">${ex}</ul></div>`;
+    return `<div class="v"><div class="spec">${pv?dot(v.lv):''}${esc(v.s)}${oriSim(v,g)}${newTag(v)}</div><dl class="p one" style="--n:1"><div class="main"><dt>${LABEL[g.g]}</dt><dd>${rm(v.o)}</dd></div></dl><ul class="x">${ex}</ul></div>`;
   }
   const lab = LABEL[g.g] || 'KLIKI Offer';
   const cols = [[lab,v.o,1]];
   if (!APPLE.includes(g.g) || g.g === 'Apple Used') cols.push(['Barcode',v.bc],['Kad Kredit',v.cc],['EPP',v.e]);
   const cells = cols.map(([l,n,m]) => `<div${m?' class="main"':''}><dt>${l}</dt><dd${n?'':' class="na"'}>${n?rm(n):'–'}</dd></div>`).join('');
   const w = v.w ? ` <small>${esc(v.w)}</small>` : '';
-  return `<div class="v"><div class="spec">${pv?dot(v.lv):''}${esc(v.s)}${oriSim(v,g)}${w}</div><dl class="p${cols.length===1?' one':''}" style="--n:${cols.length}">${cells}</dl></div>`;
+  return `<div class="v"><div class="spec">${pv?dot(v.lv):''}${esc(v.s)}${oriSim(v,g)}${newTag(v)}${w}</div><dl class="p${cols.length===1?' one':''}" style="--n:${cols.length}">${cells}</dl></div>`;
 }
 function card(g, i, zp) {
   const nm = g.note ? `<div class="note">${esc(g.note)}</div>` : '';
@@ -480,9 +483,19 @@ function parsePromos(csvText) {
   return list;
 }
 
-window.parsePrices=parsePrices;window.parsePromos=parsePromos;
+function parseChanges(csvText) {
+  const rows = csvParse(csvText); const hi = rows.findIndex(r => cl(r[0]).toUpperCase() === 'TARIKH'); const m = new Map(); if (hi < 0) return m;
+  for (const r of rows.slice(hi + 1)) { const d = parseDate(r[0]), t = cl(r[1]).toUpperCase(); if (!d || !t) continue;
+    const k = [r[2], r[3], r[4]].map(x => cl(x).toLowerCase()).join('|'); const o = m.get(k); if (!o || d > o.d) m.set(k, {d, t}); }
+  return m;
+}
+window.parsePrices=parsePrices;window.parsePromos=parsePromos;window.parseChanges=parseChanges;
 })();
-const {parsePrices, parsePromos} = window;
+const {parsePrices, parsePromos, parseChanges} = window;
+var CHG = null;
+function newTag(v) { const c = CHG && CHG.get([v.g, v.m, v.s].map(x => String(x).toLowerCase()).join('|')); if (!c) return '';
+  const t = new Date(), d0 = new Date(t.getFullYear(), t.getMonth(), t.getDate()), days = Math.round((d0 - c.d) / 864e5);
+  if (days < 0 || days > 7) return ''; return c.t === 'BARU' ? ' <span class="nb new">Baru</span>' : ' <span class="nb upd">Harga baru</span>'; };
 
 const FEED = {"prices":"1NZm7LeKzHeNJoMxKnDzNAkbhh1PfrNWvEYI7FpcTxCU","promo":"1_SoeTDYc4wl1gj6mUZRfNS0y3YAWYTGrfFPLtKE7gJA"};
 const SNAP = ITEMS.length, KEY = 'kliki-feed-v1';
@@ -502,7 +515,10 @@ const hhmm = d => d.toLocaleTimeString('ms-MY', {hour:'2-digit', minute:'2-digit
     try { if (p) { applyPrices(p); ok = true; } } catch (e) {}
     try { if (m) { applyPromos(m); ok = true; } } catch (e) {}
     if (ok) render(); return ok; };
+  try { const c = localStorage.getItem('kliki-chg-v1'); if (c) CHG = parseChanges(c); } catch (e) {}
   if (saved) apply(saved.p, saved.m);
+  (async () => { try { if (!FEED.promo) return; const r = await fetch('https://docs.google.com/spreadsheets/d/' + FEED.promo + '/gviz/tq?tqx=out:csv&sheet=Perubahan', {cache:'no-store'});
+    if (r.ok) { const c = await r.text(); CHG = parseChanges(c); try { localStorage.setItem('kliki-chg-v1', c); } catch (e) {} render(); } } catch (e) {} })();
   try {
     const [p, m] = await Promise.all([gv(FEED.prices), FEED.promo ? gv(FEED.promo) : Promise.resolve(null)]);
     if (apply(p, m)) { const at = new Date(); try { localStorage.setItem(KEY, JSON.stringify({p, m, at: +at})); } catch (e) {} fresh('Harga dari sheet · dikemas kini ' + hhmm(at)); }
