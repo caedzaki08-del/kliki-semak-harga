@@ -287,11 +287,11 @@ const left = p => {
 };
 function promoView() {
   const now = new Date();
-  const list = [...PROMOS.filter(p => now <= p.end), ...PROMOS.filter(p => now > p.end)];
+  const up = p => p.start && now < p.start; const liveP = p => now <= p.end && !up(p); const list = [...PROMOS.filter(liveP), ...PROMOS.filter(up), ...PROMOS.filter(p => now > p.end)];
   const row = (n,s,was,now,remark) => `<div class="pr"><div><div class="nm">${esc(n)}</div><div class="sp">${esc(s||'')}</div></div><div><div class="now">${rm(now)}</div>${was==null?'':`<div class="was"><s>${rm(was)}</s><b>-${(was-now).toLocaleString('en-MY')}</b></div>`}</div>${remark?`<div class="rm">${esc(remark)}</div>`:''}</div>`;
   return `<div style="display:grid;gap:12px">` + list.map(p => {
     const nrows = p.groups.reduce((a,g) => a + g.rows.length, 0);
-    const head = `<summary class="promo-head"><div class="trow">${now <= p.end ? '<span class="tag live">Sedang berjalan</span>' + left(p) : '<span class="tag off">Promo tamat</span>'}</div><h3>${esc(p.label)}</h3><div class="meta">${p.from} hingga ${p.to} · ${nrows} harga${p.badges.length?' · '+p.badges.map(esc).join(' · '):''}</div></summary>`;
+    const head = `<summary class="promo-head"><div class="trow">${now > p.end ? '<span class="tag off">Promo tamat</span>' : up(p) ? '<span class="tag">Akan bermula ' + p.start.getDate() + ' ' + ['Jan','Feb','Mac','Apr','Mei','Jun','Jul','Ogo','Sep','Okt','Nov','Dis'][p.start.getMonth()] + '</span>' : '<span class="tag live">Sedang berjalan</span>' + left(p)}</div><h3>${esc(p.label)}</h3><div class="meta">${p.from} hingga ${p.to} · ${nrows} harga${p.badges.length?' · '+p.badges.map(esc).join(' · '):''}</div></summary>`;
     const cards = p.groups.map(g => `<article class="card"><div class="ch"><h3>${esc(g.t)}</h3></div>${g.rows.map(r => row(...r)).join('')}${(g.notes||[]).map(n => `<div class="note" style="margin-top:8px">${esc(n)}</div>`).join('')}<div style="height:6px"></div></article>`).join('');
     const notes = (p.notes||[]).map(n => `<div class="note" style="margin:0">${esc(n)}</div>`).join('');
     return `<details class="promo">${head}<div class="pbody">${cards}${notes}</div></details>`;
@@ -466,7 +466,7 @@ function parsePromos(csvText) {
     const d0 = parseDate(r[c.a]), d1 = parseDate(r[c.b]); if (!d1) continue;
     let P = by.get(name);
     if (!P) { P = {label: name, from: `${d0.getDate()}/${d0.getMonth()+1}/${String(d0.getFullYear()).slice(2)}`, to: `${d1.getDate()}/${d1.getMonth()+1}/${String(d1.getFullYear()).slice(2)}`,
-      until: `${d1.getDate()} ${MON[d1.getMonth()]}`, end: new Date(d1.getFullYear(), d1.getMonth(), d1.getDate(), 23, 59, 59), badges: [], groups: [], notes: []}; by.set(name, P); list.push(P); }
+      until: `${d1.getDate()} ${MON[d1.getMonth()]}`, end: new Date(d1.getFullYear(), d1.getMonth(), d1.getDate(), 23, 59, 59), start: new Date(d0.getFullYear(), d0.getMonth(), d0.getDate()), badges: [], groups: [], notes: []}; by.set(name, P); list.push(P); }
     const g = cl(r[c.g]), model = cl(r[c.m]), spec = cl(r[c.s]), was = num(r[c.w]), now = num(r[c.n]), rem = cl(r[c.r]);
     if (g.toUpperCase() === 'LENCANA') { if (rem) P.badges.push(rem); continue; }
     if (g.toUpperCase() === 'NOTA') { if (rem) P.notes.push(rem); continue; }
