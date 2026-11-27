@@ -467,7 +467,7 @@ function parsePromos(csvText) {
   const list = [], by = new Map();
   for (const r of rows.slice(hi + 1)) {
     const name = cl(r[c.p]); if (!name) continue;
-    const open = /^STOK/i.test(cl(r[c.b])); const d0 = parseDate(r[c.a]), d1 = open ? new Date(2099, 11, 31) : parseDate(r[c.b]); if (!d1 || !d0) continue;
+    const d0 = parseDate(r[c.a]), d1 = parseDate(r[c.b]); const open = !!d1 && d1.getFullYear() >= 2099; if (!d1 || !d0) continue;
     let P = by.get(name);
     if (!P) { P = {label: name, from: `${d0.getDate()}/${d0.getMonth()+1}/${String(d0.getFullYear()).slice(2)}`, to: `${d1.getDate()}/${d1.getMonth()+1}/${String(d1.getFullYear()).slice(2)}`,
       until: `${d1.getDate()} ${MON[d1.getMonth()]}`, end: new Date(d1.getFullYear(), d1.getMonth(), d1.getDate(), 23, 59, 59), start: new Date(d0.getFullYear(), d0.getMonth(), d0.getDate()), badges: [], groups: [], notes: []}; by.set(name, P); list.push(P); if (open) { P.open = true; P.to = 'stok habis'; P.until = ''; } }
